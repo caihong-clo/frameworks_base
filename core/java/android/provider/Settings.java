@@ -15930,6 +15930,11 @@ public final class Settings {
         /**
          * @hide
          */
+        public static final String SPOOF_PIF_PHOTOS = "spoof_pif_photos";
+
+        /**
+         * @hide
+         */
         public static final String SPOOF_PIF_PROPS = "pif_spoof_props";
 
         /**
