@@ -1077,6 +1077,12 @@ interface IActivityManager {
      */
     void unregisterAnrWarningListener(in IAnrWarningCallback callback);
 
+    String getSpoofPifConfig();
+    String getSpoofGamePropsConfig();
+    String getSpoofTrickyStoreTarget();
+    String getSpoofTrickyStoreKeyBox();
+    String getSpoofTrickyStorePatch();
+
     
     /**
      *  Force full screen for devices with cutout
