@@ -73,6 +73,11 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.compose.PlatformSliderDefaults
+import com.android.systemui.common.shared.colors.SystemUISliderColors
+import com.android.systemui.qs.shared.style.LiquidGlassBrightness
+import com.android.systemui.qs.shared.style.LiquidGlassControl
+import com.android.systemui.qs.shared.style.LiquidGlassVolume
+import com.android.systemui.qs.shared.style.liquidGlassOn
 import com.android.compose.animation.scene.ContentScope
 import com.android.compose.animation.scene.ElementKey
 import com.android.compose.animation.scene.UserAction
@@ -370,7 +375,8 @@ private fun ContentScope.QuickSettingsContainer(
                     toolbarViewModelFactory = contentViewModel.toolbarViewModelFactory,
                     buildNumberViewModelFactory = contentViewModel.buildNumberViewModelFactory,
                     isTransparencyEnabled = contentViewModel.isTransparencyEnabled,
-                    volumeSliderViewModel = contentViewModel.volumeSliderViewModel,
+                    volumeSliderViewModel = { contentViewModel.volumeSliderViewModel },
+                    isVolumeDetailsEnabled = contentViewModel.isVolumeDetailsEnabled,
                     audioDetailsViewModelFactory = contentViewModel.audioDetailsViewModelFactory,
                     modifier = modifier.sysuiResTag("quick_settings_panel"),
                 )
@@ -386,7 +392,8 @@ private fun ContentScope.QuickSettingsLayout(
     toolbarViewModelFactory: ToolbarViewModel.Factory,
     buildNumberViewModelFactory: BuildNumberViewModel.Factory,
     isTransparencyEnabled: Boolean,
-    volumeSliderViewModel: AudioStreamSliderViewModel?,
+    volumeSliderViewModel: () -> AudioStreamSliderViewModel?,
+    isVolumeDetailsEnabled: Boolean,
     audioDetailsViewModelFactory: AudioDetailsViewModel.Factory,
     modifier: Modifier = Modifier,
 ) {
@@ -439,6 +446,11 @@ private fun ContentScope.QuickSettingsLayout(
                 OverlayBody(qsContainerViewModel) { OverlayBuildNumber(buildNumberViewModelFactory) }
             }
         } else {
+            // The stock style always has the media volume slider; it has no audio details to open
+            // unless that feature is on. With Liquid Glass the sliders take its two-tone look.
+            val volumeSliderViewModel =
+                if (stockOverlay || isVolumeDetailsEnabled) volumeSliderViewModel() else null
+            val glass = stockOverlay && liquidGlassOn
             Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                 Media(
                     viewModelFactory = qsContainerViewModel.mediaViewModelFactory,
@@ -469,6 +481,7 @@ private fun ContentScope.QuickSettingsLayout(
                                 ),
                             modifier = Modifier.fillMaxWidth(),
                             dimensions = QuickSettingsShade.Dimensions.brightnessSliderDimensions,
+                            glassAccent = if (glass) LiquidGlassBrightness else null,
                         )
                     }
                 }
@@ -497,33 +510,56 @@ private fun ContentScope.QuickSettingsLayout(
                                     volumeSliderViewModel.onValueChangeFinished()
                                 },
                                 onIconTapped = { volumeSliderViewModel.toggleMuted(volumeSliderState) },
-                                sliderColors = PlatformSliderDefaults.defaultPlatformSliderColors(),
+                                sliderColors =
+                                    PlatformSliderDefaults.defaultPlatformSliderColors().let {
+                                        if (!glass) it
+                                        else
+                                            it.copy(
+                                                trackColor = LiquidGlassControl,
+                                                indicatorColor = Color.White,
+                                                iconColor = LiquidGlassVolume,
+                                                labelColorOnIndicator = LiquidGlassVolume,
+                                                labelColorOnTrack = Color.White,
+                                            )
+                                    },
+                                materialSliderColors =
+                                    if (!glass) SystemUISliderColors.Defaults
+                                    else
+                                        SystemUISliderColors.Defaults.copy(
+                                            thumbColor = Color.White,
+                                            activeTrackColor = Color.White,
+                                            inactiveTrackColor = LiquidGlassControl,
+                                            activeTickColor = LiquidGlassVolume,
+                                            inactiveTickColor = Color.White,
+                                        ),
                                 hapticsViewModelFactory =
                                     volumeSliderViewModel.getSliderHapticsViewModelFactory(),
                                 dimensions = QuickSettingsShade.Dimensions.VolumeSliderDimensions,
                             )
-                            Spacer(Modifier.width(8.dp))
-                            IconButton(
-                                modifier =
-                                    Modifier.size(
-                                        QuickSettingsShade.Dimensions.VolumeSliderDimensions.trackHeight
-                                    ),
-                                colors =
-                                    IconButtonDefaults.iconButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                                    ),
-                                onClick = {
-                                    qsContainerViewModel.detailsViewModel.onVolumeSettingsButtonClicked(
-                                        audioDetailsViewModelFactory.create()
+                            if (isVolumeDetailsEnabled) {
+                                Spacer(Modifier.width(8.dp))
+                                IconButton(
+                                    modifier =
+                                        Modifier.size(
+                                            QuickSettingsShade.Dimensions.VolumeSliderDimensions.trackHeight
+                                        ),
+                                    colors =
+                                        IconButtonDefaults.iconButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                                        ),
+                                    onClick = {
+                                        qsContainerViewModel.detailsViewModel.onVolumeSettingsButtonClicked(
+                                            audioDetailsViewModelFactory.create()
+                                        )
+                                    },
+                                ) {
+                                    Icon(
+                                        painterResource(R.drawable.ic_more_vert),
+                                        // TODO(b/378513663): Update the placeholder content description
+                                        contentDescription = "Volume settings",
                                     )
-                                },
-                            ) {
-                                Icon(
-                                    painterResource(R.drawable.ic_more_vert),
-                                    // TODO(b/378513663): Update the placeholder content description
-                                    contentDescription = "Volume settings",
-                                )
+                                }
                             }
                         }
                     }
