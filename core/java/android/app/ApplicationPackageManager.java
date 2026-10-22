@@ -957,9 +957,7 @@ public class ApplicationPackageManager extends PackageManager {
             boolean photosSpoof = false;
             try {
                 photosSpoof = !Process.isIsolated()
-                    && "com.google.android.apps.photos".equals(pkg)
-                    && Settings.Secure.getInt(mContext.getContentResolver(),
-                            Settings.Secure.GPHOTOS_SPOOF, 1) == 1;
+                    && "com.google.android.apps.photos".equals(pkg);
             } catch (Exception e) {}
 
             if (photosSpoof) {
@@ -967,7 +965,7 @@ public class ApplicationPackageManager extends PackageManager {
                 if (FEATURES_PIXEL_OTHERS.contains(name)) return true;
                 if (FEATURES_TENSOR.contains(name)) return false;
                 if (FEATURES_NEXUS.contains(name)) return true;
-            } else if (!"com.google.android.apps.photos".equals(pkg)) {
+            } else {
                 if (FEATURES_PIXEL.contains(name)) return true;
                 if (FEATURES_PIXEL_OTHERS.contains(name)) return true;
                 if (FEATURES_TENSOR.contains(name)) return true;
