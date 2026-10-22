@@ -15930,31 +15930,6 @@ public final class Settings {
         /**
          * @hide
          */
-        public static final String SPOOF_PIF_PHOTOS = "spoof_pif_photos";
-
-        /**
-         * @hide
-         */
-        public static final String SPOOF_PIF_PROPS = "pif_spoof_props";
-
-        /**
-         * @hide
-         */
-        public static final String SPOOF_PIF_PROVIDER = "pif_spoof_provider";
-
-        /**
-         * @hide
-         */
-        public static final String SPOOF_PIF_SIGNATURE = "pif_spoof_signature";
-
-        /**
-         * @hide
-         */
-        public static final String SPOOF_PIF_VENDING_BUILD = "pif_spoof_vending_build";
-
-        /**
-         * @hide
-         */
         public static final String SPOOF_GAMEPROPS_CONFIG = "spoof_gameprops_config";
 
         /**
@@ -15971,11 +15946,6 @@ public final class Settings {
          * @hide
          */
         public static final String SPOOF_TRICKYSTORE_PATCH = "spoof_trickystore_patch";
-
-        /**
-         * @hide
-         */
-        public static final String SPOOF_PIF_TARGETS = "spoof_pif_targets";
 
         /**
          * Network traffic indicator mode
