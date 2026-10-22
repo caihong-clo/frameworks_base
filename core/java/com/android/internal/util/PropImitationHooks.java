@@ -50,8 +50,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import java.util.concurrent.ConcurrentHashMap;
-
 /**
  * @hide
  */
@@ -59,149 +57,6 @@ public class PropImitationHooks {
 
     private static final String TAG = "PropImitationHooks";
     private static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
-
-    private static native void setFieldNative(Class<?> targetClass,
-            Field field, String type, Object value);
-
-    private static volatile boolean sSpoofPropsForProcess = false;
-    private static final Map<String, String> sSystemProps = new ConcurrentHashMap<>();
-
-    public static void setSpoofPropsForProcess(boolean enabled) {
-        sSpoofPropsForProcess = enabled;
-    }
-
-    public static boolean isSpoofPropsForProcess() {
-        return sSpoofPropsForProcess;
-    }
-
-    public static String getSpoofedProperty(String key) {
-        if (key == null || !sSpoofPropsForProcess) return null;
-        String val = sSystemProps.get(key);
-        if (val != null) return val;
-        for (Map.Entry<String, String> entry : sSystemProps.entrySet()) {
-            String pattern = entry.getKey();
-            if (pattern.startsWith("*") && key.endsWith(pattern.substring(1))) {
-                return entry.getValue();
-            }
-        }
-        return null;
-    }
-
-    private static void mapSystemProp(String key, String value) {
-        sSystemProps.put(key, value);
-        switch (key) {
-            case "BRAND":
-                sSystemProps.put("ro.product.brand", value);
-                sSystemProps.put("ro.product.odm.brand", value);
-                sSystemProps.put("ro.product.system.brand", value);
-                sSystemProps.put("ro.product.system_ext.brand", value);
-                sSystemProps.put("ro.product.vendor.brand", value);
-                sSystemProps.put("ro.product.product.brand", value);
-                break;
-            case "DEVICE":
-                sSystemProps.put("ro.product.device", value);
-                sSystemProps.put("ro.product.odm.device", value);
-                sSystemProps.put("ro.product.system.device", value);
-                sSystemProps.put("ro.product.system_ext.device", value);
-                sSystemProps.put("ro.product.vendor.device", value);
-                sSystemProps.put("ro.product.product.device", value);
-                break;
-            case "FINGERPRINT":
-                sSystemProps.put("ro.build.fingerprint", value);
-                sSystemProps.put("ro.bootimage.build.fingerprint", value);
-                sSystemProps.put("ro.odm.build.fingerprint", value);
-                sSystemProps.put("ro.system.build.fingerprint", value);
-                sSystemProps.put("ro.system_ext.build.fingerprint", value);
-                sSystemProps.put("ro.vendor.build.fingerprint", value);
-                sSystemProps.put("ro.product.build.fingerprint", value);
-                break;
-            case "ID":
-                sSystemProps.put("ro.build.id", value);
-                break;
-            case "MANUFACTURER":
-                sSystemProps.put("ro.product.manufacturer", value);
-                sSystemProps.put("ro.product.odm.manufacturer", value);
-                sSystemProps.put("ro.product.system.manufacturer", value);
-                sSystemProps.put("ro.product.system_ext.manufacturer", value);
-                sSystemProps.put("ro.product.vendor.manufacturer", value);
-                sSystemProps.put("ro.product.product.manufacturer", value);
-                break;
-            case "MODEL":
-                sSystemProps.put("ro.product.model", value);
-                sSystemProps.put("ro.product.odm.model", value);
-                sSystemProps.put("ro.product.system.model", value);
-                sSystemProps.put("ro.product.system_ext.model", value);
-                sSystemProps.put("ro.product.vendor.model", value);
-                sSystemProps.put("ro.product.product.model", value);
-                break;
-            case "PRODUCT":
-                sSystemProps.put("ro.product.name", value);
-                sSystemProps.put("ro.product.odm.name", value);
-                sSystemProps.put("ro.product.system.name", value);
-                sSystemProps.put("ro.product.system_ext.name", value);
-                sSystemProps.put("ro.product.vendor.name", value);
-                sSystemProps.put("ro.product.product.name", value);
-                break;
-            case "VERSION.RELEASE":
-                sSystemProps.put("ro.build.version.release", value);
-                break;
-            case "VERSION.INCREMENTAL":
-                sSystemProps.put("ro.build.version.incremental", value);
-                break;
-            case "VERSION.SECURITY_PATCH":
-                sSystemProps.put("ro.build.version.security_patch", value);
-                sSystemProps.put("ro.vendor.build.security_patch", value);
-                break;
-            case "VERSION.DEVICE_INITIAL_SDK_INT":
-                sSystemProps.put("ro.product.first_api_level", value);
-                break;
-            case "TYPE":
-                sSystemProps.put("ro.build.type", value);
-                break;
-            case "TAGS":
-                sSystemProps.put("ro.build.tags", value);
-                break;
-            default:
-                if (key.startsWith("ro.")) {
-                    sSystemProps.put(key, value);
-                }
-                break;
-        }
-    }
-
-    private static void setPropValue(String key, Object value) {
-        if (key == null || value == null) return;
-        try {
-            dlog("Setting prop " + key + " to " + value.toString());
-            Class clazz = Build.class;
-            if (key.startsWith("VERSION.")) {
-                clazz = Build.VERSION.class;
-                key = key.substring(8);
-            }
-            Field field = clazz.getDeclaredField(key);
-            field.setAccessible(true);
-            Class<?> fieldType = field.getType();
-            Object typedValue;
-            if (fieldType.equals(Integer.TYPE)) {
-                typedValue = (value instanceof Integer) ? value : Integer.parseInt(value.toString());
-            } else if (fieldType.equals(Long.TYPE)) {
-                typedValue = (value instanceof Long) ? value : Long.parseLong(value.toString());
-            } else if (fieldType.equals(Boolean.TYPE)) {
-                typedValue = (value instanceof Boolean) ? value : Boolean.parseBoolean(value.toString());
-            } else {
-                typedValue = value.toString();
-            }
-            try {
-                setFieldNative(clazz, field, fieldType.getName(), typedValue);
-            } catch (Throwable t) {
-                // Fallback to Java reflection if native library is unavailable
-                field.set(null, typedValue);
-            }
-            field.setAccessible(false);
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to set prop " + key, e);
-        }
-    }
 
     private static final Boolean sDisableGmsProps = SystemProperties.getBoolean(
             "persist.sys.pihooks.disable.gms_props", false);
@@ -342,32 +197,38 @@ public class PropImitationHooks {
         } else if (!sStockFp.isEmpty() && packageName.equals(PACKAGE_ARCORE)) {
             dlog("Setting stock fingerprint for: " + packageName);
             setPropValue("FINGERPRINT", sStockFp);
-            mapSystemProp("FINGERPRINT", sStockFp);
-            sSpoofPropsForProcess = true;
         } else if (sIsPhotos) {
             dlog("Spoofing Pixel XL for Google Photos");
-            sPixelXLProps.forEach((k, v) -> {
-                setPropValue(k, v);
-                mapSystemProp(k, v);
-            });
-            sSpoofPropsForProcess = true;
+            sPixelXLProps.forEach((PropImitationHooks::setPropValue));
         } else if (sForceTensor && sIsRecentPixel) {
             dlog("Spoofing Recent Pixel for: " + packageName);
-            sRecentPixelProps.forEach((k, v) -> {
-                setPropValue(k, v);
-                mapSystemProp(k, v);
-            });
-            sSpoofPropsForProcess = true;
+            sRecentPixelProps.forEach((PropImitationHooks::setPropValue));
         } else if (!sNetflixModel.isEmpty() && packageName.equals(PACKAGE_NETFLIX)) {
             dlog("Setting model to " + sNetflixModel + " for Netflix");
             setPropValue("MODEL", sNetflixModel);
-            mapSystemProp("MODEL", sNetflixModel);
-            sSpoofPropsForProcess = true;
+        }
+    }
+
+    private static void setPropValue(String key, String value) {
+        try {
+            dlog("Setting prop " + key + " to " + value.toString());
+            Class clazz = Build.class;
+            if (key.startsWith("VERSION.")) {
+                clazz = Build.VERSION.class;
+                key = key.substring(8);
+            }
+            Field field = clazz.getDeclaredField(key);
+            field.setAccessible(true);
+            // Cast the value to int if it's an integer field, otherwise string.
+            field.set(null, field.getType().equals(Integer.TYPE) ? Integer.parseInt(value) : value);
+            field.setAccessible(false);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to set prop " + key, e);
         }
     }
 
     private static void setPlayIntegrityProps(Context context) {
-        if (SystemProperties.getBoolean("persist.sys.pihooks.disable.gms_props", false)) {
+        if (sDisableGmsProps) {
             dlog("GMS prop imitation is disabled by user");
             return;
         }
@@ -391,14 +252,11 @@ public class PropImitationHooks {
             dlog("Parsing props fetched / provided by user");
             try {
                 JSONObject parsedProps = new JSONObject(savedProps);
-                if (parsedProps.has("props") && parsedProps.opt("props") instanceof JSONObject) {
-                    parsedProps = parsedProps.getJSONObject("props");
-                }
                 Iterator<String> keys = parsedProps.keys();
                 while (keys.hasNext()) {
                     String key = keys.next();
-                    Object val = parsedProps.get(key);
-                    props.add(key + ":" + (val != null ? val.toString() : ""));
+                    String value = parsedProps.getString(key);
+                    props.add(key + ":" + value);
                 }
             } catch (JSONException e) {
                 Log.e(TAG, "Error parsing JSON data", e);
@@ -429,11 +287,9 @@ public class PropImitationHooks {
 
         if (!was) {
             dlog("Spoofing build for GMS / Finsky");
-            sSpoofPropsForProcess = true;
             setCertifiedProps();
         } else {
             dlog("Skip spoofing build for GMS / Finsky, because GmsAddAccountActivityOnTop");
-            sSpoofPropsForProcess = false;
         }
 
         try {
@@ -452,7 +308,6 @@ public class PropImitationHooks {
                 continue;
             }
             setPropValue(fieldAndProp[0], fieldAndProp[1]);
-            mapSystemProp(fieldAndProp[0], fieldAndProp[1]);
         }
     }
 
